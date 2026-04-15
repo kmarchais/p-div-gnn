@@ -198,9 +198,9 @@ def hole_plate_mesh(
 
 def compute_mechanical_fields(
     mesh: fd.Mesh,
-    sigma_xx: float,
-    sigma_yy: float,
-    sigma_xy: float,
+    eps_xx: float,
+    eps_yy: float,
+    gamma_xy: float,
     young_modulus: float = 1e5,
     poisson_ratio: float = 0.3,
 ) -> np.ndarray:
@@ -211,11 +211,6 @@ def compute_mechanical_fields(
 
     type_el = mesh.elm_type
     center = mesh.nearest_node(mesh.bounding_box.center)
-    sigma_xx, sigma_yy, sigma_xy = (
-        sigma_xx * mesh.bounding_box.volume,
-        sigma_yy * mesh.bounding_box.volume,
-        sigma_xy * mesh.bounding_box.volume,
-    )
 
     material = fd.constitutivelaw.ElasticIsotrop(young_modulus, poisson_ratio)
 
@@ -236,15 +231,19 @@ def compute_mechanical_fields(
     pb.apply_boundary_conditions()
 
     pb.bc.remove("_Strain")
-    pb.bc.add("Dirichlet", "E_xx", sigma_xx, start_value=0, name="_Strain")
-    pb.bc.add("Dirichlet", "E_yy", sigma_yy, start_value=0, name="_Strain")
-    pb.bc.add("Dirichlet", "E_xy", sigma_xy, start_value=0, name="_Strain")
+    pb.bc.add("Dirichlet", "E_xx", eps_xx, start_value=0, name="_Strain")
+    pb.bc.add("Dirichlet", "E_yy", eps_yy, start_value=0, name="_Strain")
+    pb.bc.add(
+        "Dirichlet", "E_xy", gamma_xy, start_value=0, name="_Strain"
+    )
 
     pb.apply_boundary_conditions()
 
     pb.solve()
 
     stress_field_per_node = pb.get_results(assemb, "Stress", "Node")["Stress"]
+    if not np.isfinite(stress_field_per_node).all():
+        raise ValueError("Linear FEM returned non-finite nodal stresses")
     mesh.reset_interpolation()
     fd.Assembly.delete_memory()
     return stress_field_per_node
@@ -319,6 +318,8 @@ def compute_mechanical_fields_hyperelast(
     res = pb.get_results(assemb, ["Disp", "Stress", "Strain"], "Node")
 
     stress_field_per_node = pb.get_results(assemb, "Stress", "Node")["Stress"]
+    if not np.isfinite(stress_field_per_node).all():
+        raise ValueError("Hyperelastic FEM returned non-finite nodal stresses")
     strain_field_per_node = pb.get_results(assemb, "Strain", "Node")["Strain"]
     # Filter XX, YY, XY
     xx_yy_xy_indices = [0, 1, 3]
