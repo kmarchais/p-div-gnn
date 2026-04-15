@@ -21,6 +21,7 @@ from tempfile import NamedTemporaryFile
 import gmsh
 import numpy as np
 import pyvista as pv
+
 from gnn_local_stress import datasets
 from gnn_local_stress.periodicity import is_periodic
 

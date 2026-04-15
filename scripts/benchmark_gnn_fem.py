@@ -31,8 +31,8 @@ import simcoon
 import torch
 import torch_geometric as PyG
 from fire import Fire
+
 from gnn_local_stress import models
-from gnn_local_stress.periodicity import is_periodic
 from gnn_local_stress.convert_utils import mesh_to_graph
 from gnn_local_stress.datasets import (
     NodeType,
@@ -40,6 +40,7 @@ from gnn_local_stress.datasets import (
     compute_node_labels,
     compute_periodic_graph,
 )
+from gnn_local_stress.periodicity import is_periodic
 
 GPU_ONLY = True
 
